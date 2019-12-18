@@ -23,14 +23,28 @@ import net.librec.math.structure.DenseMatrix;
 import net.librec.math.structure.SparseVector;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Guo Guibing
  */
 public class Randoms {
-    private static Random r = new Random(System.currentTimeMillis());
+    private static ConcurrentHashMap<Long, Random> threadRandoms = new ConcurrentHashMap<>();
 
     private static List<Object> _tempList = new ArrayList<>();
+
+    /**
+     * Return the Random object associate with this thread.
+     */
+    private static Random r() {
+        long threadId = Thread.currentThread().getId();
+        Random threadRandom = threadRandoms.get(threadId);
+        if (threadRandom == null) {
+            threadRandom = new Random(System.currentTimeMillis());
+            threadRandoms.put(threadId, threadRandom);
+        }
+        return threadRandom;
+    }
 
     /**
      * Random generate an integer in [0, range)
@@ -43,7 +57,7 @@ public class Randoms {
     }
 
     public static void seed(long seed) {
-        r = new Random(seed);
+        threadRandoms.put(Thread.currentThread().getId(), new Random(seed));
     }
 
     /**
@@ -54,7 +68,7 @@ public class Randoms {
      * @return     an integer random generated in [min, max)
      */
     public static int uniform(int min, int max) {
-        return min + r.nextInt(max - min);
+        return min + r().nextInt(max - min);
     }
 
     /**
@@ -126,7 +140,7 @@ public class Randoms {
      * @return Random (uniformly distributed) double in [min, max)
      */
     public static double uniform(double min, double max) {
-        return min + (max - min) * r.nextDouble();
+        return min + (max - min) * r().nextDouble();
     }
 
     /**
@@ -156,7 +170,7 @@ public class Randoms {
      * @return  a real number from a Gaussian distribution with given mean and stddev
      */
     public static double gaussian(double mu, double sigma) {
-        return mu + sigma * r.nextGaussian();
+        return mu + sigma * r().nextGaussian();
     }
 
     /**
@@ -181,18 +195,18 @@ public class Randoms {
         if (alpha < 1.0) {
             b = 1.0 + 0.36788794412 * alpha; // Step 1
             while (true) {
-                double p = b * r.nextDouble();
+                double p = b * r().nextDouble();
                 // Step 2. Case gds <= 1
                 if (p <= 1.0) {
                     gds = Math.exp(Math.log(p) / alpha);
-                    if (Math.log(r.nextDouble()) <= -gds) {
+                    if (Math.log(r().nextDouble()) <= -gds) {
                         return gds / rate;
                     }
                 }
                 // Step 3. Case gds > 1
                 else {
                     gds = -Math.log((b - p) / alpha);
-                    if (Math.log(r.nextDouble()) <= ((alpha - 1.0) * Math.log(gds))) {
+                    if (Math.log(r().nextDouble()) <= ((alpha - 1.0) * Math.log(gds))) {
                         return gds / rate;
                     }
                 }
@@ -217,8 +231,8 @@ public class Randoms {
             double v1;
 
             do {
-                v1 = 2.0 * r.nextDouble() - 1.0;
-                double v2 = 2.0 * r.nextDouble() - 1.0;
+                v1 = 2.0 * r().nextDouble() - 1.0;
+                double v2 = 2.0 * r().nextDouble() - 1.0;
                 v12 = v1 * v1 + v2 * v2;
             } while (v12 > 1.0);
 
@@ -230,7 +244,7 @@ public class Randoms {
                 return gds / rate;
             }
 
-            double u = r.nextDouble();
+            double u = r().nextDouble();
             if (d * u <= t * t * t) { // Squeeze acceptance
                 return gds / rate;
             }
@@ -317,8 +331,8 @@ public class Randoms {
                 double sign_u;
                 double e;
                 do { // Step 9. Rejection of t
-                    e = -Math.log(r.nextDouble());
-                    u = r.nextDouble();
+                    e = -Math.log(r().nextDouble());
+                    u = r().nextDouble();
                     u = u + u - 1.0;
                     sign_u = (u > 0) ? 1.0 : -1.0;
                     t = b + (e * si) * sign_u;
@@ -524,7 +538,7 @@ public class Randoms {
     public static int nextInt(int min, int max, int... exceptions) {
         int next;
         while (true) {
-            next = min + r.nextInt(max - min);
+            next = min + r().nextInt(max - min);
             if (exceptions != null && exceptions.length > 0 && Arrays.binarySearch(exceptions, next) >= 0) {
                 continue;
             }
@@ -624,7 +638,7 @@ public class Randoms {
         Set<Integer> ints = new HashSet();
 
         while (true) {
-            int rand = min + r.nextInt(max - min);
+            int rand = min + r().nextInt(max - min);
             ints.add(rand);
 
             if (ints.size() >= length)
@@ -652,7 +666,7 @@ public class Randoms {
         int sum = 0;
         for (int i = 0; i < pros.length; i++) {
             //avoid zero
-            pros[i] = r.nextInt(size) + 1;
+            pros[i] = r().nextInt(size) + 1;
             sum += pros[i];
         }
 
